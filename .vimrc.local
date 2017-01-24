@@ -44,6 +44,7 @@ au FileType htmldjango setlocal et sw=2 ts=2
 au FileType javascript setlocal et sw=2 ts=2
 
 set clipboard=
+set virtualedit=
 let NERDTreeQuitOnOpen=0
 let NERDTreeShowHidden=0
 set nospell
