@@ -1,12 +1,48 @@
+call plug#begin('~/.vim/plugged')
+
+Plug 'scrooloose/nerdtree', { 'on':  'NERDTreeToggle' }
+Plug 'davidhalter/jedi-vim', { 'for': 'python' }
+Plug 'altercation/vim-colors-solarized'
+Plug 'kien/ctrlp.vim'
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-surround'
+Plug 'sheerun/vim-polyglot'
+Plug 'andymass/vim-matchup'
+Plug 'vim-syntastic/syntastic'
+
+" Git integration
+Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-commentary'  " comment-out by gc
+
+" snippets
+Plug 'SirVer/ultisnips'
+Plug 'ncm2/ncm2-ultisnips'
+Plug 'honza/vim-snippets'
+
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
+
+" Formater
+Plug 'Chiel92/vim-autoformat'
+
+" markdown
+Plug 'plasticboy/vim-markdown'
+Plug 'vim-pandoc/vim-pandoc-syntax'
+" tabular plugin is used to format tables
+Plug 'godlygeek/tabular'
+
+" JSON front matter highlight plugin
+Plug 'elzr/vim-json'
+
+call plug#end()
+
 set nocompatible
 source $VIMRUNTIME/mswin.vim
 behave mswin
-
 set nonumber "不显示行号
 set noexpandtab "不显示tab
 set nolist "不显示末尾空格
 set noignorecase  "搜索时大小写敏感
-
 set cursorline
 hi CursorLine cterm=bold ctermbg=DarkBlue
 set background=dark
@@ -25,31 +61,27 @@ if has('win32')
 else
   set gfn=Deja\ Vu\ Sans\ Mono\ 10
 endif
-
 " tab navigation
 nnoremap tl :tabnext<CR>
 nnoremap th :tabprev<CR>
 nnoremap tn :tabnew<CR>
 nnoremap tc :tabclose<CR>
 nnoremap <leader>ct :CtrlP<CR>
-
-nnoremap tt :NERDTree<CR>
+nnoremap tt :NERDTreeToggle<CR>
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q! | endif
 let g:fencview_autodetect = 1   "打开文件时自动识别编码
 let g:fencview_checklines = 10 "检查前后10行来判断编码
-
 au FileType python setlocal et sw=4 ts=4
 au FileType html setlocal et sw=2 ts=2
 au FileType htmldjango setlocal et sw=2 ts=2
 au FileType javascript setlocal et sw=2 ts=2
-
 set clipboard=
 set virtualedit=
 let NERDTreeQuitOnOpen=0
 let NERDTreeShowHidden=0
 set nospell
 set nofoldenable
-
 let g:flake8_ignore='E501'
 let g:syntastic_python_checker_args = "--ignore E501,E128"
 let g:syntastic_python_flake8_args='--ignore=E501'
+set hlsearch
