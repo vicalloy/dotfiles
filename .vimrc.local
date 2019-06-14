@@ -9,8 +9,11 @@ Plug 'tpope/vim-surround'
 Plug 'sheerun/vim-polyglot'
 Plug 'andymass/vim-matchup'
 Plug 'vim-syntastic/syntastic'
+Plug 'easymotion/vim-easymotion'
+Plug 'terryma/vim-multiple-cursors'
 
 " Git integration
+Plug 'Xuyuanp/nerdtree-git-plugin'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-commentary'  " comment-out by gc
 
