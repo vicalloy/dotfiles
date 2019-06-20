@@ -59,11 +59,6 @@ set guioptions+=b
 set fileformats=unix ",dos
 set encoding=utf-8    " Set default encoding to UTF-8
 set fileencodings=ucs-bom,utf-8,gbk,big5,latin1
-if has('win32')
-  set gfn=DejaVu_Sans_Mono:h10
-else
-  set gfn=Deja\ Vu\ Sans\ Mono\ 10
-endif
 " tab navigation
 nnoremap tl :tabnext<CR>
 nnoremap th :tabprev<CR>
@@ -88,3 +83,12 @@ let g:flake8_ignore='E501'
 let g:syntastic_python_checker_args = "--ignore E501,E128"
 let g:syntastic_python_flake8_args='--ignore=E501'
 set hlsearch
+if (has("gui_running"))
+else
+    colorscheme default
+endif
+if has('win32')
+  set gfn=DejaVu_Sans_Mono:h10
+else
+  set gfn=Deja\ Vu\ Sans\ Mono\ 10
+endif
