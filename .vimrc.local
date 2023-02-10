@@ -1,41 +1,10 @@
 call plug#begin('~/.vim/plugged')
 
 Plug 'scrooloose/nerdtree', { 'on':  'NERDTreeToggle' }
-Plug 'davidhalter/jedi-vim', { 'for': 'python' }
 Plug 'altercation/vim-colors-solarized'
-Plug 'kien/ctrlp.vim'
-Plug 'tpope/vim-surround'
-Plug 'tpope/vim-surround'
-Plug 'sheerun/vim-polyglot'
-Plug 'andymass/vim-matchup'
-Plug 'vim-syntastic/syntastic'
-Plug 'easymotion/vim-easymotion'
-Plug 'terryma/vim-multiple-cursors'
-
-" Git integration
-Plug 'Xuyuanp/nerdtree-git-plugin'
-Plug 'tpope/vim-fugitive'
-Plug 'tpope/vim-commentary'  " comment-out by gc
-
-" snippets
-Plug 'SirVer/ultisnips'
-Plug 'ncm2/ncm2-ultisnips'
-Plug 'honza/vim-snippets'
 
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
-
-" Formater
-Plug 'Chiel92/vim-autoformat'
-
-" markdown
-Plug 'plasticboy/vim-markdown'
-Plug 'vim-pandoc/vim-pandoc-syntax'
-" tabular plugin is used to format tables
-Plug 'godlygeek/tabular'
-
-" JSON front matter highlight plugin
-Plug 'elzr/vim-json'
 
 call plug#end()
 
