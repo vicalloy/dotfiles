@@ -13,7 +13,6 @@ vim.opt.rtp:prepend(lazypath)
 
 vim.api.nvim_set_option('cursorline', true)
 vim.api.nvim_set_option('background', 'dark')
--- vim.cmd('colorscheme solarized')
 vim.api.nvim_set_option('backup', false)
 vim.api.nvim_set_option('autochdir', true)
 vim.api.nvim_set_option('fileformats', 'unix')
@@ -31,15 +30,31 @@ vim.api.nvim_set_keymap('t', '<D-v>', '<C-R>+', { noremap = true })
 vim.api.nvim_set_keymap('v', '<D-c>', '"+y<CR>', { noremap = true })
 vim.api.nvim_set_keymap('v', '<D-x>', '"+x<CR>', { noremap = true })
 
+vim.api.nvim_command([[
+autocmd Filetype lua setlocal ts=2 sw=2 et
+]])
+
+
 require("lazy").setup(
 {
   "williamboman/mason.nvim",
   {
-    "ishan9299/nvim-solarized-lua",
+    "lukas-reineke/indent-blankline.nvim",
+    main = "ibl",
+    opts = {}
+  },
+  {
+    "folke/tokyonight.nvim",
     config = function()
-      -- don't show the tabs so brightly
-      vim.g.solarized_visibility = "low"
-      vim.cmd('colorscheme solarized')
+      require("tokyonight").setup({
+        style = "moon",
+      })
+      if vim.fn.has("gui_running") ~= 0 then
+        vim.cmd('colorscheme tokyonight')
+      else
+        vim.cmd("colorscheme tokyonight")
+        -- vim.cmd("colorscheme default")
+      end
     end,
   },
   {
@@ -62,6 +77,7 @@ require("lazy").setup(
     dependencies = {
       'MunifTanjim/nui.nvim',
       'nvim-lua/plenary.nvim',
+      'nvim-tree/nvim-web-devicons',
     },
     keys = {
       { "<leader>ft", "<cmd>Neotree toggle<cr>", desc = "NeoTree" },
@@ -130,6 +146,11 @@ require("lazy").setup(
     dependencies = {
       "rafamadriz/friendly-snippets"
     },
+    build = "make install_jsregexp",
+    config = function()
+      require("lualine").setup()
+      require("luasnip.loaders.from_vscode").lazy_load()
+    end,
   },
   {
     "hrsh7th/nvim-cmp",
@@ -142,6 +163,12 @@ require("lazy").setup(
     },
     config = function()
       local cmp = require("cmp")
+      local ls = require("luasnip")
+
+      vim.keymap.set({"i"}, "<C-K>", function() ls.expand() end, {silent = true})
+      vim.keymap.set({"i", "s"}, "<C-L>", function() ls.jump( 1) end, {silent = true})
+      vim.keymap.set({"i", "s"}, "<C-J>", function() ls.jump(-1) end, {silent = true})
+
       cmp.setup({
         snippet = {
           expand = function(args)
@@ -205,5 +232,39 @@ require("lazy").setup(
 
     end,
   },
+  {
+    'mfussenegger/nvim-dap',
+    config = function()
+      local dap = require("dap")
+      vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "DAP: Toggle breackpoint" })
+      vim.keymap.set('n', '<F5>', dap.continue, { desc = "DAP: continue" })
+      vim.keymap.set('n', '<F10>', dap.step_over, { desc = "DAP: step_over" })
+      vim.keymap.set('n', '<F11>', dap.step_into, { desc = "DAP: step_into" })
+      vim.keymap.set('n', '<F12>', dap.step_out, { desc = "DAP: step_out" })
+    end,
+  },
+  {
+    "folke/which-key.nvim",
+    event = "VeryLazy",
+    init = function()
+      vim.o.timeout = true
+      vim.o.timeoutlen = 300
+    end,
+    opts = {
+    }
+  },
+  {
+    'numToStr/Comment.nvim',
+    opts = {
+      -- `gc` to toggle comment
+    },
+    lazy = false,
+  },
+  {
+    'windwp/nvim-ts-autotag',
+    config = function()
+      require('nvim-ts-autotag').setup()
+    end,
+  }
 })
 
