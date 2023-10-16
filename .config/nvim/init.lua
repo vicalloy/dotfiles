@@ -31,12 +31,8 @@ end
 vim.api.nvim_set_keymap('n', 'tn', ':tabnew<CR>', { noremap = true })
 vim.api.nvim_set_keymap('n', 'tc', ':tabclose<CR>', { noremap = true })
 
--- Allow copy paste in neovim
-vim.api.nvim_set_keymap('n', '<D-v>', '"+p', { noremap = true })
-vim.api.nvim_set_keymap('i', '<D-v>', '<C-R>+', { noremap = true })
-vim.api.nvim_set_keymap('t', '<D-v>', '<C-R>+', { noremap = true })
-vim.api.nvim_set_keymap('v', '<D-c>', '"+y<CR>', { noremap = true })
-vim.api.nvim_set_keymap('v', '<D-x>', '"+x<CR>', { noremap = true })
+-- Mac map
+vim.cmd.source("$VIMRUNTIME/macmap.vim")
 
 vim.api.nvim_command([[
 autocmd Filetype lua setlocal ts=2 sw=2 et
