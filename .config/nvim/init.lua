@@ -30,6 +30,8 @@ end
 -- tab navigation
 vim.api.nvim_set_keymap('n', 'tn', ':tabnew<CR>', { noremap = true })
 vim.api.nvim_set_keymap('n', 'tc', ':tabclose<CR>', { noremap = true })
+vim.api.nvim_set_keymap('n', 'tl', ':tabnext<CR>', { noremap = true })
+vim.api.nvim_set_keymap('n', 'th', ':tabprev<CR>', { noremap = true })
 
 -- Mac map
 vim.cmd.source("$VIMRUNTIME/macmap.vim")
