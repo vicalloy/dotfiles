@@ -100,8 +100,10 @@ require("lazy").setup(
     config = function()
       require("neo-tree").setup({
         filesystem = {
-          use_libuv_file_watcher = true, -- This will use the OS level file watchers to detect changes
-          -- instead of relying on nvim autocmd events.
+          use_libuv_file_watcher = true,
+          follow_current_file = {
+            enabled = true,
+          },
         },
       })
     end,
