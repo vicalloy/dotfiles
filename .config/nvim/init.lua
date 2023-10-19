@@ -90,9 +90,9 @@ require("lazy").setup(
   {
     "nvim-neo-tree/neo-tree.nvim",
     dependencies = {
-      'MunifTanjim/nui.nvim',
       'nvim-lua/plenary.nvim',
       'nvim-tree/nvim-web-devicons',
+      'MunifTanjim/nui.nvim',
     },
     keys = {
       { "<leader>ft", "<cmd>Neotree toggle<cr>", desc = "NeoTree" },
