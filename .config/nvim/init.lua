@@ -287,6 +287,14 @@ require("lazy").setup(
     config = function()
       require('nvim-ts-autotag').setup()
     end,
+  },
+  {
+    "kylechui/nvim-surround",
+    event = "VeryLazy",
+    config = function()
+      require("nvim-surround").setup({
+      })
+    end
   }
 })
 
