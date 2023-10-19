@@ -16,7 +16,7 @@ vim.opt.guifont = 'Source Code Pro'
 vim.api.nvim_set_option('cursorline', true)
 vim.api.nvim_set_option('background', 'dark')
 vim.api.nvim_set_option('backup', false)
-vim.api.nvim_set_option('autochdir', true)
+-- vim.api.nvim_set_option('autochdir', true)
 vim.api.nvim_set_option('fileformats', 'unix')
 vim.api.nvim_set_option('encoding', 'utf-8')
 vim.api.nvim_set_option('fileencodings', 'ucs-bom,utf-8,gbk,big5,latin1')
