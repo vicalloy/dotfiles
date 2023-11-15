@@ -44,7 +44,6 @@ autocmd Filetype lua setlocal ts=2 sw=2 et
 
 require("lazy").setup(
 {
-  "williamboman/mason.nvim",
   {
     "simrat39/symbols-outline.nvim",
     keys = {
@@ -74,14 +73,11 @@ require("lazy").setup(
     end,
   },
   {
-    "williamboman/mason-lspconfig.nvim",
-    config = function()
-      require("mason").setup {}
-      require("mason-lspconfig").setup {}
-    end,
-  },
-  {
     "neovim/nvim-lspconfig",
+    dependencies = {
+      "williamboman/mason.nvim",
+      "williamboman/mason-lspconfig.nvim",
+    },
     -- npm i -g pyright
     config = function()
       -- require("lspconfig").pyright.setup{}
