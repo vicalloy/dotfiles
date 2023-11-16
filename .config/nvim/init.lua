@@ -21,6 +21,8 @@ vim.api.nvim_set_option('fileformats', 'unix')
 vim.api.nvim_set_option('encoding', 'utf-8')
 vim.api.nvim_set_option('fileencodings', 'ucs-bom,utf-8,gbk,big5,latin1')
 vim.o.foldlevel = 99
+vim.o.autoread = true
+vim.wo.wrap = false
 
 -- neovide
 if vim.g.neovide then
