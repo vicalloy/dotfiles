@@ -80,7 +80,6 @@ require("lazy").setup(
       "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
     },
-    -- npm i -g pyright
     config = function()
       -- require("lspconfig").pyright.setup{}
       -- require("lspconfig").tsserver.setup{}
@@ -244,10 +243,19 @@ require("lazy").setup(
 
       -- Set up lspconfig.
       local capabilities = require('cmp_nvim_lsp').default_capabilities()
+      -- npm i -g pyright
+      -- brew install clangd
+      -- brew install rust-analyzer
       require("lspconfig").pyright.setup {
         capabilities = capabilities
       }
       require("lspconfig").tsserver.setup {
+        capabilities = capabilities
+      }
+      require("lspconfig").clangd.setup {
+        capabilities = capabilities
+      }
+      require("lspconfig").rust_analyzer.setup {
         capabilities = capabilities
       }
 
