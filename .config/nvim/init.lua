@@ -20,14 +20,17 @@ vim.api.nvim_set_option('backup', false)
 vim.api.nvim_set_option('fileformats', 'unix')
 vim.api.nvim_set_option('encoding', 'utf-8')
 vim.api.nvim_set_option('fileencodings', 'ucs-bom,utf-8,gbk,big5,latin1')
+vim.api.nvim_set_keymap("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", { noremap = true, silent = true })
+vim.api.nvim_set_keymap("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", { noremap = true, silent = true })
+vim.api.nvim_set_keymap("n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>", {silent = true, noremap = true})
 vim.o.foldlevel = 99
 vim.o.autoread = true
 vim.wo.wrap = false
 
 -- neovide
 if vim.g.neovide then
-  vim.g.neovide_scroll_animation_length = 0
   vim.g.neovide_cursor_animation_length = 0
+  vim.g.neovide_scroll_animation_length = 0
   vim.o.guifont = 'Source Code Pro'
 end
 
@@ -40,6 +43,8 @@ vim.api.nvim_set_keymap('n', 'th', ':tabprev<CR>', { noremap = true })
 -- Mac map
 vim.cmd.source("$VIMRUNTIME/macmap.vim")
 
+vim.api.nvim_set_keymap('n', '<ScrollWheelRight>', '<Nop>', { noremap = true })
+vim.api.nvim_set_keymap('n', '<ScrollWheelLeft>', '<Nop>', { noremap = true })
 vim.api.nvim_command([[
 autocmd Filetype lua setlocal ts=2 sw=2 et
 ]])
@@ -244,19 +249,18 @@ require("lazy").setup(
 
       -- Set up lspconfig.
       local capabilities = require('cmp_nvim_lsp').default_capabilities()
+      local lspconfig = require("lspconfig")
+      lspconfig["ts_ls"].setup({})
       -- npm i -g pyright
       -- brew install clangd
       -- brew install rust-analyzer
-      require("lspconfig").pyright.setup {
+      lspconfig.pyright.setup {
         capabilities = capabilities
       }
-      require("lspconfig").tsserver.setup {
+      lspconfig.clangd.setup {
         capabilities = capabilities
       }
-      require("lspconfig").clangd.setup {
-        capabilities = capabilities
-      }
-      require("lspconfig").rust_analyzer.setup {
+      lspconfig.rust_analyzer.setup {
         capabilities = capabilities
       }
 
@@ -315,4 +319,3 @@ require("lazy").setup(
     end
   },
 })
-
