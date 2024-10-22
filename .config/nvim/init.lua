@@ -52,6 +52,8 @@ autocmd Filetype lua setlocal ts=2 sw=2 et
 
 require("lazy").setup(
 {
+  { 'echasnovski/mini.nvim', version = '*' },
+  { 'echasnovski/mini.icons', version = '*' },
   {
     "simrat39/symbols-outline.nvim",
     keys = {
