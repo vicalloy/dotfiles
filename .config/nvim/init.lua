@@ -75,21 +75,17 @@ vim.api.nvim_create_autocmd("FileType", {
 -- Diagnostics Configuration (for Neovim 0.11+)
 -- =============================================================================
 -- Configure how diagnostics are displayed
+local signs = { Error = " ", Warn = " ", Hint = "󰌵 ", Info = " " }
+
 vim.diagnostic.config({
   virtual_text = true,
-  signs = true,
+  signs = {
+    text = signs,
+  },
   underline = true,
   update_in_insert = false,
   severity_sort = true,
 })
-
--- Change diagnostic signs to icons
-local signs = { Error = " ", Warn = " ", Hint = "󰌵 ", Info = " " }
-for type, icon in pairs(signs) do
-  local hl = "DiagnosticSign" .. type
-  vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
-end
-
 
 -- =============================================================================
 -- Plugin Setup with Lazy.nvim
