@@ -13,6 +13,11 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 -- =============================================================================
+-- NOTE
+-- install nerdfonts: https://www.nerdfonts.com/font-downloads
+-- =============================================================================
+
+-- =============================================================================
 -- General Options
 -- =============================================================================
 vim.opt.guifont = 'Source Code Pro'
@@ -79,7 +84,7 @@ vim.diagnostic.config({
 })
 
 -- Change diagnostic signs to icons
-local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
+local signs = { Error = " ", Warn = " ", Hint = "󰌵 ", Info = " " }
 for type, icon in pairs(signs) do
   local hl = "DiagnosticSign" .. type
   vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
