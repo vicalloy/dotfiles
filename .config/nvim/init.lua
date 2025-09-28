@@ -148,43 +148,50 @@ require("lazy").setup({
 
       require("mason").setup()
       require("mason-lspconfig").setup({
-        ensure_installed = { "lua_ls", "pyright", "clangd", "rust_analyzer", "tsserver" }
+        ensure_installed = { "pyright", "rust_analyzer", "ts_ls" }
       })
 
-      local servers = require("mason-lspconfig").get_installed_servers()
-      for _, server_name in ipairs(servers) do
-        lspconfig[server_name].setup {
-          on_attach = on_attach,
-          capabilities = capabilities,
-        }
-      end
+      require("mason-lspconfig").setup_handlers({
+        -- 默认处理器：适用于所有未单独配置的 LSP
+        function(server_name)
+          lspconfig[server_name].setup {
+            on_attach = on_attach,
+            capabilities = capabilities,
+          }
+        end,
 
-      lspconfig.lua_ls.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-        settings = {
-          Lua = {
-            diagnostics = {
-              globals = { 'vim' },
+        -- 特殊配置：只对特定 LSP 覆盖默认行为
+        ["lua_ls"] = function()
+          lspconfig.lua_ls.setup {
+            on_attach = on_attach,
+            capabilities = capabilities,
+            settings = {
+              Lua = {
+                diagnostics = {
+                  globals = { 'vim' },
+                },
+              },
             },
-          },
-        },
-      })
+          }
+        end,
 
-      -- Python 特殊配置，确保 pyright 正常工作
-      lspconfig.pyright.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-        settings = {
-          python = {
-            analysis = {
-              typeCheckingMode = "basic",
-              autoSearchPaths = true,
-              useLibraryCodeForTypes = true,
+        ["pyright"] = function()
+          lspconfig.pyright.setup {
+            on_attach = on_attach,
+            capabilities = capabilities,
+            settings = {
+              python = {
+                analysis = {
+                  typeCheckingMode = "basic",
+                  autoSearchPaths = true,
+                  useLibraryCodeForTypes = true,
+                }
+              }
             }
           }
-        }
+        end,
       })
+
     end,
   },
   {
