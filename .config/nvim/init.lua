@@ -1,12 +1,12 @@
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
   vim.fn.system({
     "git",
     "clone",
     "--filter=blob:none",
     "https://github.com/folke/lazy.nvim.git",
-    "--branch=stable", -- latest stable release
+    "--branch=stable",
     lazypath,
   })
 end
@@ -33,10 +33,10 @@ vim.opt.wrap = false
 
 -- 补全相关选项
 vim.opt.completeopt = { 'menu', 'menuone', 'noselect' }
-vim.opt.pumheight = 15  -- 限制弹出菜单高度
+vim.opt.pumheight = 15
 
--- Set leader key for which-key to see
-vim.g.mapleader = " "
+-- Set leader key
+-- vim.g.mapleader = " "
 
 -- Neovide specific settings
 if vim.g.neovide then
@@ -68,13 +68,16 @@ vim.keymap.set('n', '<ScrollWheelLeft>', '<Nop>', { noremap = true })
 -- =============================================================================
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "lua",
-  command = "setlocal ts=2 sw=2 et",
+  callback = function()
+    vim.opt_local.ts = 2
+    vim.opt_local.sw = 2
+    vim.opt_local.et = true
+  end,
 })
 
 -- =============================================================================
--- Diagnostics Configuration (for Neovim 0.11+)
+-- Diagnostics Configuration
 -- =============================================================================
--- Configure how diagnostics are displayed
 local signs = { Error = " ", Warn = " ", Hint = "󰌵 ", Info = " " }
 
 vim.diagnostic.config({
@@ -85,6 +88,9 @@ vim.diagnostic.config({
   underline = true,
   update_in_insert = false,
   severity_sort = true,
+  float = {
+    border = "rounded",
+  },
 })
 
 -- =============================================================================
@@ -92,7 +98,11 @@ vim.diagnostic.config({
 -- =============================================================================
 require("lazy").setup({
   { 'echasnovski/mini.nvim', version = '*' },
-  { 'echasnovski/mini.icons', version = '*' },
+  {
+    'echasnovski/mini.icons',
+    version = '*',
+    opts = {},
+  },
   {
     "simrat39/symbols-outline.nvim",
     keys = {
@@ -105,11 +115,11 @@ require("lazy").setup({
   {
     "lukas-reineke/indent-blankline.nvim",
     main = "ibl",
-    opts = {}
+    opts = {},
   },
   {
     "folke/tokyonight.nvim",
-    priority = 1000, -- Make sure to load this before other plugins
+    priority = 1000,
     config = function()
       require("tokyonight").setup({
         style = "moon",
@@ -123,7 +133,7 @@ require("lazy").setup({
     dependencies = {
       "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
-      'hrsh7th/cmp-nvim-lsp', -- For LSP completion capabilities
+      'hrsh7th/cmp-nvim-lsp',
     },
     config = function()
       local lspconfig = require("lspconfig")
@@ -147,52 +157,69 @@ require("lazy").setup({
         vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, opts)
       end
 
+      -- Mason 基础配置
       require("mason").setup()
+
+      -- Mason-lspconfig v2.0.0+ 新 API：使用 handlers 替代 setup_handlers
       require("mason-lspconfig").setup({
-        ensure_installed = { "pyright", "rust_analyzer", "ts_ls" }
-      })
+        ensure_installed = { "pyright", "rust_analyzer", "ts_ls" },  -- 注意 ts_ls 而非 tsserver
+        handlers = {
+          -- 默认处理器：适用于所有未单独配置的 LSP
+          function(server_name)
+            lspconfig[server_name].setup {
+              on_attach = on_attach,
+              capabilities = capabilities,
+            }
+          end,
 
-      require("mason-lspconfig").setup_handlers({
-        -- 默认处理器：适用于所有未单独配置的 LSP
-        function(server_name)
-          lspconfig[server_name].setup {
-            on_attach = on_attach,
-            capabilities = capabilities,
-          }
-        end,
-
-        -- 特殊配置：只对特定 LSP 覆盖默认行为
-        ["lua_ls"] = function()
-          lspconfig.lua_ls.setup {
-            on_attach = on_attach,
-            capabilities = capabilities,
-            settings = {
-              Lua = {
-                diagnostics = {
-                  globals = { 'vim' },
+          -- 特殊配置：lua_ls
+          ["lua_ls"] = function()
+            lspconfig.lua_ls.setup {
+              on_attach = on_attach,
+              capabilities = capabilities,
+              settings = {
+                Lua = {
+                  diagnostics = {
+                    globals = { 'vim' },
+                  },
                 },
               },
-            },
-          }
-        end,
+            }
+          end,
 
-        ["pyright"] = function()
-          lspconfig.pyright.setup {
-            on_attach = on_attach,
-            capabilities = capabilities,
-            settings = {
-              python = {
-                analysis = {
-                  typeCheckingMode = "basic",
-                  autoSearchPaths = true,
-                  useLibraryCodeForTypes = true,
+          -- 特殊配置：pyright
+          ["pyright"] = function()
+            lspconfig.pyright.setup {
+              on_attach = on_attach,
+              capabilities = capabilities,
+              settings = {
+                python = {
+                  analysis = {
+                    typeCheckingMode = "basic",
+                    autoSearchPaths = true,
+                    useLibraryCodeForTypes = true,
+                  }
                 }
               }
             }
-          }
-        end,
-      })
+          end,
 
+          -- 特殊配置：rust_analyzer（可选）
+          ["rust_analyzer"] = function()
+            lspconfig.rust_analyzer.setup {
+              on_attach = on_attach,
+              capabilities = capabilities,
+              settings = {
+                ["rust-analyzer"] = {
+                  checkOnSave = {
+                    command = "clippy",
+                  },
+                },
+              },
+            }
+          end,
+        },
+      })
     end,
   },
   {
@@ -229,7 +256,21 @@ require("lazy").setup({
     },
     config = function()
       local telescope = require("telescope")
-      telescope.setup()
+      telescope.setup({
+        pickers = {
+          find_files = {
+            hidden = true,
+          },
+        },
+        extensions = {
+          fzf = {
+            fuzzy = true,
+            override_generic_sorter = true,
+            override_file_sorter = true,
+            case_mode = "smart_case",
+          },
+        },
+      })
       telescope.load_extension('fzf')
     end,
   },
@@ -237,14 +278,17 @@ require("lazy").setup({
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     config = function()
-      require("nvim-treesitter.configs").setup {
+      require("nvim-treesitter.config").setup({
         ensure_installed = { "python", "c", "lua", "vim", "vimdoc", "javascript", "html", "rust" },
         sync_install = false,
         auto_install = true,
         highlight = {
           enable = true,
-        }
-      }
+        },
+        autotag = {
+          enable = true,
+        },
+      })
     end,
   },
   {
@@ -261,7 +305,7 @@ require("lazy").setup({
     keys = {
       { "<leader>tt", "<cmd>ToggleTerm<cr>", desc = "Toggle Terminal" },
     },
-    opts = {}
+    opts = {},
   },
   {
     "lewis6991/gitsigns.nvim",
@@ -335,20 +379,17 @@ require("lazy").setup({
           { name = 'buffer', priority = 500 },
           { name = 'path', priority = 250 },
         }),
-        -- 关键配置：启用自动补全
         completion = {
           autocomplete = {
             cmp.TriggerEvent.TextChanged,
           },
           completeopt = 'menu,menuone,noselect'
         },
-        -- 自动触发字符
         experimental = {
-          ghost_text = true, -- 显示预览文本
+          ghost_text = true,
         }
       })
 
-      -- 设置特定字符自动触发补全
       vim.api.nvim_create_autocmd("InsertCharPre", {
         callback = function()
           local char = vim.v.char
@@ -389,7 +430,7 @@ require("lazy").setup({
       vim.o.timeout = true
       vim.o.timeoutlen = 300
     end,
-    opts = {}
+    opts = {},
   },
   {
     'numToStr/Comment.nvim',
@@ -418,4 +459,3 @@ require("lazy").setup({
     end
   },
 })
-
