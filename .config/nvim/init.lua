@@ -30,6 +30,7 @@ vim.opt.fileencodings = 'ucs-bom,utf-8,gbk,big5,latin1'
 vim.opt.foldlevel = 99
 vim.opt.autoread = true
 vim.opt.wrap = false
+vim.env.PATH = vim.env.PATH .. ":" .. os.getenv("HOME") .. "/.cargo/bin"
 
 -- 补全相关选项
 vim.opt.completeopt = { 'menu', 'menuone', 'noselect' }
