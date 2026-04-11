@@ -20,7 +20,7 @@ vim.opt.rtp:prepend(lazypath)
 -- =============================================================================
 -- General Options
 -- =============================================================================
-vim.opt.guifont = 'Source Code Pro'
+vim.opt.guifont = 'Source Code Pro'  -- Hack
 vim.opt.cursorline = true
 vim.opt.background = 'dark'
 vim.opt.backup = false
@@ -43,7 +43,6 @@ vim.opt.pumheight = 15
 if vim.g.neovide then
   vim.g.neovide_cursor_animation_length = 0
   vim.g.neovide_scroll_animation_length = 0
-  vim.o.guifont = 'Source Code Pro'
 end
 
 -- =============================================================================
@@ -58,6 +57,14 @@ vim.keymap.set('n', 'th', ':tabprev<CR>', { noremap = true, desc = "Previous Tab
 -- Mac map (if you are on macOS)
 if vim.fn.has('macunix') == 1 then
   vim.cmd.source("$VIMRUNTIME/macmap.vim")
+end
+
+if vim.fn.has('linux') == 1 then
+  vim.keymap.set('v', '<C-c>', '"+y')
+  vim.keymap.set('n', '<C-v>', '"+p')
+  vim.keymap.set('i', '<C-v>', '<C-r>+')
+  vim.keymap.set('n', '<C-x>', '"+dd')
+  vim.keymap.set('v', '<C-x>', '"+d')
 end
 
 -- Disable horizontal scroll with mouse
