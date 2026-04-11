@@ -1,5 +1,19 @@
 # dotfiles
 
+## Linux
+
+```bash
+sudo apt install wl-clipboard
+
+vim.keymap.set('v', '<D-c>', '"+y')      -- Super+C 复制到系统剪切板
+vim.keymap.set('n', '<D-v>', '"+p')      -- Super+V 粘贴
+vim.keymap.set('i', '<D-v>', '<C-r>+')
+vim.keymap.set('n', '<D-x>', '"+dd')     -- Super+X 剪切
+vim.keymap.set('v', '<D-x>', '"+d')
+```
+
+## Common
+
 ```bash
 # 开启代理
 proxy_on() {
