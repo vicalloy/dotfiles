@@ -56,7 +56,16 @@ vim.keymap.set('n', 'th', ':tabprev<CR>', { noremap = true, desc = "Previous Tab
 
 -- Mac map (if you are on macOS)
 if vim.fn.has('macunix') == 1 then
-  vim.cmd.source("$VIMRUNTIME/macmap.vim")
+  vim.keymap.set('n', '<D-c>', '"+y')
+  vim.keymap.set('v', '<D-c>', '"+y')
+  vim.keymap.set('n', '<D-x>', '"+x')
+  vim.keymap.set('v', '<D-x>', '"+x')
+  vim.keymap.set(
+    {'n', 'v', 's', 'x', 'o', 'i', 'l', 'c', 't'},
+    '<D-v>',
+    function() vim.api.nvim_paste(vim.fn.getreg('+'), true, -1) end,
+    { noremap = true, silent = true }
+  )
 end
 
 if vim.fn.has('linux') == 1 then
