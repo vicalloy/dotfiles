@@ -302,9 +302,6 @@ require("lazy").setup({
         highlight = {
           enable = true,
         },
-        autotag = {
-          enable = true,
-        },
       })
     end,
   },
