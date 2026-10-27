@@ -295,8 +295,26 @@ require("lazy").setup({
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     config = function()
+      -- 注意：Neovim 0.12 内置 tree-sitter 0.25（ABI 15）。升级 Neovim 后必须让
+      -- nvim-treesitter 与解析器一起重编译，否则旧版 .so 会返回 nil 节点，触发
+      --   Decoration provider "start" (ns=nvim.treesitter.highlighter):
+      --   attempt to call method 'range' (a nil value)
+      -- 升级流程：:Lazy update nvim-treesitter，然后 :TSUpdate（或删除 parser/*.so 后重装）。
+      --
+      -- 另：nvim-treesitter 的 master 分支已冻结（2026-03），其 query_predicates.lua
+      -- 里 #set-lang-from-info-string! 等指令按“单节点”编写，而 0.12 传入的是节点列表，
+      -- 打开含注入语言（markdown 代码块、html script 等）的文件会崩。已在本机插件文件
+      --   lua/nvim-treesitter/query_predicates.lua
+      -- 增加 first_node() 兼容（所有 predicate/directive 均已修正）。若重装该插件需重新打补丁。
       require("nvim-treesitter.configs").setup({
-        ensure_installed = { "python", "c", "lua", "vim", "vimdoc", "javascript", "html", "rust" },
+        ensure_installed = {
+          "bash", "bibtex", "c", "c_sharp", "cpp", "css", "csv", "dockerfile",
+          "editorconfig", "git_config", "gitignore", "go", "hcl", "html",
+          "htmldjango", "ini", "javascript", "json", "jsonc", "lua", "make",
+          "markdown", "markdown_inline", "nginx", "perl", "po", "python",
+          "requirements", "rst", "rust", "sql", "toml", "tsx", "typescript",
+          "vim", "vimdoc", "xml", "yaml",
+        },
         sync_install = false,
         auto_install = true,
         highlight = {
