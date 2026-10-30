@@ -9,6 +9,9 @@ if not vim.uv.fs_stat(lazypath) then
     "--branch=stable",
     lazypath,
   })
+  if vim.v.shell_error ~= 0 then
+    error("Failed to clone lazy.nvim")
+  end
 end
 vim.opt.rtp:prepend(lazypath)
 
@@ -25,12 +28,18 @@ vim.opt.cursorline = true
 vim.opt.background = 'dark'
 vim.opt.backup = false
 vim.opt.fileformats = 'unix'
-vim.opt.encoding = 'utf-8'
 vim.opt.fileencodings = 'ucs-bom,utf-8,gbk,big5,latin1'
 vim.opt.foldlevel = 99
 vim.opt.autoread = true
 vim.opt.wrap = false
-vim.env.PATH = vim.env.PATH .. ":" .. os.getenv("HOME") .. "/.cargo/bin"
+
+local cargo_bin = vim.fs.joinpath(vim.env.HOME, ".cargo", "bin")
+local path_entries = vim.split(vim.env.PATH or "", ":", { plain = true, trimempty = true })
+if not vim.tbl_contains(path_entries, cargo_bin) then
+  vim.env.PATH = vim.env.PATH and (vim.env.PATH .. ":" .. cargo_bin) or cargo_bin
+end
+
+local filetype_group = vim.api.nvim_create_augroup("UserFileType", { clear = true })
 
 -- 补全相关选项
 vim.opt.completeopt = { 'menu', 'menuone', 'noselect' }
@@ -49,10 +58,10 @@ end
 -- Key Mappings
 -- =============================================================================
 -- Tab navigation
-vim.keymap.set('n', 'tn', ':tabnew<CR>', { noremap = true, desc = "New Tab" })
-vim.keymap.set('n', 'tc', ':tabclose<CR>', { noremap = true, desc = "Close Tab" })
-vim.keymap.set('n', 'tl', ':tabnext<CR>', { noremap = true, desc = "Next Tab" })
-vim.keymap.set('n', 'th', ':tabprev<CR>', { noremap = true, desc = "Previous Tab" })
+vim.keymap.set('n', 'tn', ':tabnew<CR>', { desc = "New Tab" })
+vim.keymap.set('n', 'tc', ':tabclose<CR>', { desc = "Close Tab" })
+vim.keymap.set('n', 'tl', ':tabnext<CR>', { desc = "Next Tab" })
+vim.keymap.set('n', 'th', ':tabprev<CR>', { desc = "Previous Tab" })
 
 -- Mac map (if you are on macOS)
 if vim.fn.has('macunix') == 1 then
@@ -64,7 +73,7 @@ if vim.fn.has('macunix') == 1 then
     {'n', 'v', 's', 'x', 'o', 'i', 'l', 'c', 't'},
     '<D-v>',
     function() vim.api.nvim_paste(vim.fn.getreg('+'), true, -1) end,
-    { noremap = true, silent = true }
+    { silent = true }
   )
 end
 
@@ -77,13 +86,14 @@ if vim.fn.has('linux') == 1 then
 end
 
 -- Disable horizontal scroll with mouse
-vim.keymap.set('n', '<ScrollWheelRight>', '<Nop>', { noremap = true })
-vim.keymap.set('n', '<ScrollWheelLeft>', '<Nop>', { noremap = true })
+vim.keymap.set('n', '<ScrollWheelRight>', '<Nop>')
+vim.keymap.set('n', '<ScrollWheelLeft>', '<Nop>')
 
 -- =============================================================================
 -- Autocmds
 -- =============================================================================
 vim.api.nvim_create_autocmd("FileType", {
+  group = filetype_group,
   pattern = "lua",
   callback = function()
     vim.opt_local.ts = 2
@@ -95,7 +105,12 @@ vim.api.nvim_create_autocmd("FileType", {
 -- =============================================================================
 -- Diagnostics Configuration
 -- =============================================================================
-local signs = { Error = " ", Warn = " ", Hint = "󰌵 ", Info = " " }
+local signs = {
+  [vim.diagnostic.severity.ERROR] = " ",
+  [vim.diagnostic.severity.WARN] = " ",
+  [vim.diagnostic.severity.HINT] = "󰌵 ",
+  [vim.diagnostic.severity.INFO] = " ",
+}
 
 vim.diagnostic.config({
   virtual_text = true,
@@ -114,20 +129,18 @@ vim.diagnostic.config({
 -- Plugin Setup with Lazy.nvim
 -- =============================================================================
 require("lazy").setup({
-  { 'echasnovski/mini.nvim', version = '*' },
   {
     'echasnovski/mini.icons',
     version = '*',
     opts = {},
   },
   {
-    "simrat39/symbols-outline.nvim",
+    "hedyhli/outline.nvim",
+    cmd = { "Outline", "OutlineOpen" },
     keys = {
-      { "<leader>so", "<cmd>SymbolsOutline<cr>", desc = "Symbols Outline" },
+      { "<leader>so", "<cmd>Outline<cr>", desc = "Symbols Outline" },
     },
-    config = function()
-      require("symbols-outline").setup {}
-    end,
+    opts = {},
   },
   {
     "lukas-reineke/indent-blankline.nvim",
@@ -148,16 +161,15 @@ require("lazy").setup({
     "neovim/nvim-lspconfig",
     event = { "BufReadPre", "BufNewFile" },
     dependencies = {
-      "williamboman/mason.nvim",
-      "williamboman/mason-lspconfig.nvim",
+      "mason-org/mason.nvim",
+      "mason-org/mason-lspconfig.nvim",
       'hrsh7th/cmp-nvim-lsp',
     },
     config = function()
-      local lspconfig = require("lspconfig")
       local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
-      local on_attach = function(client, bufnr)
-        local opts = { buffer = bufnr, noremap = true, silent = true }
+      local on_attach = function(_, bufnr)
+        local opts = { buffer = bufnr, silent = true }
         vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
         vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
         vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
@@ -168,74 +180,54 @@ require("lazy").setup({
         vim.keymap.set({ 'n', 'v' }, '<leader>ca', vim.lsp.buf.code_action, opts)
         vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
         vim.keymap.set('n', '<leader>f', function() vim.lsp.buf.format { async = true } end, opts)
-        vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, opts)
-        vim.keymap.set('n', ']d', vim.diagnostic.goto_next, opts)
+        vim.keymap.set('n', '[d', function()
+          vim.diagnostic.jump({ count = -1, float = true })
+        end, opts)
+        vim.keymap.set('n', ']d', function()
+          vim.diagnostic.jump({ count = 1, float = true })
+        end, opts)
         vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, opts)
         vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, opts)
       end
 
-      -- Mason 基础配置
-      require("mason").setup()
-
-      -- Mason-lspconfig v2.0.0+ 新 API：使用 handlers 替代 setup_handlers
-      require("mason-lspconfig").setup({
-        ensure_installed = { "pyright", "rust_analyzer", "ts_ls" },  -- 注意 ts_ls 而非 tsserver
-        handlers = {
-          -- 默认处理器：适用于所有未单独配置的 LSP
-          function(server_name)
-            lspconfig[server_name].setup {
-              on_attach = on_attach,
-              capabilities = capabilities,
-            }
-          end,
-
-          -- 特殊配置：lua_ls
-          ["lua_ls"] = function()
-            lspconfig.lua_ls.setup {
-              on_attach = on_attach,
-              capabilities = capabilities,
-              settings = {
-                Lua = {
-                  diagnostics = {
-                    globals = { 'vim' },
-                  },
-                },
-              },
-            }
-          end,
-
-          -- 特殊配置：pyright
-          ["pyright"] = function()
-            lspconfig.pyright.setup {
-              on_attach = on_attach,
-              capabilities = capabilities,
-              settings = {
-                python = {
-                  analysis = {
-                    typeCheckingMode = "basic",
-                    autoSearchPaths = true,
-                    useLibraryCodeForTypes = true,
-                  }
-                }
-              }
-            }
-          end,
-
-          -- 特殊配置：rust_analyzer（可选）
-          ["rust_analyzer"] = function()
-            lspconfig.rust_analyzer.setup {
-              on_attach = on_attach,
-              capabilities = capabilities,
-              settings = {
-                ["rust-analyzer"] = {
-                  checkOnSave = {
-                    command = "clippy",
-                  },
-                },
-              },
-            }
-          end,
+      vim.lsp.config("*", {
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
+      vim.lsp.config("lua_ls", {
+        settings = {
+          Lua = {
+            diagnostics = {
+              globals = { 'vim' },
+            },
+          },
         },
+      })
+      vim.lsp.config("pyright", {
+        settings = {
+          python = {
+            analysis = {
+              typeCheckingMode = "basic",
+              autoSearchPaths = true,
+              useLibraryCodeForTypes = true,
+            },
+          },
+        },
+      })
+      vim.lsp.config("rust_analyzer", {
+        settings = {
+          ["rust-analyzer"] = {
+            checkOnSave = {
+              command = "clippy",
+            },
+          },
+        },
+      })
+
+      require("mason").setup()
+      -- v2 默认通过 vim.lsp.enable() 启用所有已安装的服务器。
+      require("mason-lspconfig").setup({
+        ensure_installed = { "lua_ls", "pyright", "rust_analyzer", "ts_ls" },
       })
     end,
   },
@@ -293,33 +285,41 @@ require("lazy").setup({
   },
   {
     "nvim-treesitter/nvim-treesitter",
-    build = ":TSUpdate",
+    branch = "main",
+    lazy = false,
+    build = ":TSUpdate", -- 需要 tree-sitter-cli 0.26.1+
     config = function()
-      -- 注意：Neovim 0.12 内置 tree-sitter 0.25（ABI 15）。升级 Neovim 后必须让
-      -- nvim-treesitter 与解析器一起重编译，否则旧版 .so 会返回 nil 节点，触发
-      --   Decoration provider "start" (ns=nvim.treesitter.highlighter):
-      --   attempt to call method 'range' (a nil value)
-      -- 升级流程：:Lazy update nvim-treesitter，然后 :TSUpdate（或删除 parser/*.so 后重装）。
-      --
-      -- 另：nvim-treesitter 的 master 分支已冻结（2026-03），其 query_predicates.lua
-      -- 里 #set-lang-from-info-string! 等指令按“单节点”编写，而 0.12 传入的是节点列表，
-      -- 打开含注入语言（markdown 代码块、html script 等）的文件会崩。已在本机插件文件
-      --   lua/nvim-treesitter/query_predicates.lua
-      -- 增加 first_node() 兼容（所有 predicate/directive 均已修正）。若重装该插件需重新打补丁。
-      require("nvim-treesitter.configs").setup({
-        ensure_installed = {
-          "bash", "bibtex", "c", "c_sharp", "cpp", "css", "csv", "dockerfile",
-          "editorconfig", "git_config", "gitignore", "go", "hcl", "html",
-          "htmldjango", "ini", "javascript", "json", "jsonc", "lua", "make",
-          "markdown", "markdown_inline", "nginx", "perl", "po", "python",
-          "requirements", "rst", "rust", "sql", "toml", "tsx", "typescript",
-          "vim", "vimdoc", "xml", "yaml",
-        },
-        sync_install = false,
-        auto_install = true,
-        highlight = {
-          enable = true,
-        },
+      local treesitter = require("nvim-treesitter")
+      treesitter.setup({})
+      vim.treesitter.language.register("json", { "jsonc" })
+      treesitter.install({
+        "bash", "bibtex", "c", "c_sharp", "cpp", "css", "csv", "dockerfile",
+        "editorconfig", "git_config", "gitignore", "go", "hcl", "html",
+        "htmldjango", "ini", "javascript", "json", "lua", "make",
+        "markdown", "markdown_inline", "nginx", "perl", "po", "python",
+        "requirements", "rst", "rust", "sql", "toml", "tsx", "typescript",
+        "vim", "vimdoc", "xml", "yaml",
+      })
+
+      -- 保留原来的自动安装与高亮行为。
+      local available = {}
+      for _, lang in ipairs(treesitter.get_available()) do
+        available[lang] = true
+      end
+      vim.api.nvim_create_autocmd("FileType", {
+        group = filetype_group,
+        callback = function(args)
+          local lang = vim.treesitter.language.get_lang(args.match)
+          if not lang or not available[lang] or pcall(vim.treesitter.start, args.buf, lang) then
+            return
+          end
+          treesitter.install(lang):await(function(err, installed)
+            if not err and installed and vim.api.nvim_buf_is_valid(args.buf)
+                and vim.bo[args.buf].filetype == args.match then
+              pcall(vim.treesitter.start, args.buf, lang)
+            end
+          end)
+        end,
       })
     end,
   },
@@ -328,9 +328,7 @@ require("lazy").setup({
     dependencies = {
       'nvim-tree/nvim-web-devicons',
     },
-    config = function()
-      require("lualine").setup()
-    end,
+    opts = {},
   },
   {
     "akinsho/toggleterm.nvim",
@@ -341,9 +339,7 @@ require("lazy").setup({
   },
   {
     "lewis6991/gitsigns.nvim",
-    config = function()
-      require("gitsigns").setup()
-    end,
+    opts = {},
   },
   {
     'L3MON4D3/LuaSnip',
@@ -423,6 +419,7 @@ require("lazy").setup({
       })
 
       vim.api.nvim_create_autocmd("InsertCharPre", {
+        group = vim.api.nvim_create_augroup("UserCmp", { clear = true }),
         callback = function()
           local char = vim.v.char
           if char == '.' then
@@ -465,29 +462,18 @@ require("lazy").setup({
     opts = {},
   },
   {
-    'numToStr/Comment.nvim',
-    opts = {},
-    lazy = false,
-  },
-  {
     'windwp/nvim-ts-autotag',
-    config = function()
-      require('nvim-ts-autotag').setup()
-    end,
+    opts = {},
   },
   {
     "kylechui/nvim-surround",
     event = "VeryLazy",
-    config = function()
-      require("nvim-surround").setup({})
-    end
+    opts = {},
   },
   {
     "kevinhwang91/nvim-ufo",
     dependencies = "kevinhwang91/promise-async",
     event = "VeryLazy",
-    config = function()
-      require("ufo").setup({})
-    end
+    opts = {},
   },
 })
