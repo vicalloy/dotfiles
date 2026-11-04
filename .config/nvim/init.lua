@@ -126,6 +126,35 @@ vim.diagnostic.config({
 })
 
 -- =============================================================================
+-- telescope-project options
+-- 不做目录扫描：项目由用户在 picker 里手动加入——c 取当前 git 根，C 取当前 cwd，
+-- 记录写在 stdpath('data')/telescope-projects.txt；d 只是停用（activated=0），不动磁盘。
+-- 参数在下面的 telescope.setup({ extensions = ... }) 里注册，此处只声明一份。
+-- =============================================================================
+local function open_project_in_neotree(prompt_bufnr)
+  local path = require("telescope._extensions.project.actions").get_selected_path(prompt_bufnr)
+  require("telescope.actions").close(prompt_bufnr)
+  vim.schedule(function()
+    if vim.fn.isdirectory(path) == 0 then
+      vim.notify("项目目录不存在: " .. path, vim.log.levels.WARN)
+      return
+    end
+    require("neo-tree.command").execute({ source = "filesystem", dir = path })
+  end)
+end
+
+local telescope_project = {
+  hidden_files = true,        -- 与 <leader>ff 的 hidden 保持一致
+  order_by = "recent",        -- 最近打开的优先，其余按标题
+  cd_scope = { "tab", "window", "global" }, -- 按 o 在 tcd / lcd / cd 间轮换
+  mappings = {
+    -- b 默认依赖 telescope-file-browser（未安装），这里改成用 neo-tree 打开项目目录
+    n = { b = open_project_in_neotree },
+    i = { ["<c-b>"] = open_project_in_neotree },
+  },
+}
+
+-- =============================================================================
 -- Plugin Setup with Lazy.nvim
 -- =============================================================================
 require("lazy").setup({
@@ -203,6 +232,21 @@ require("lazy").setup({
           },
         },
       })
+      -- pyright 只会在 PATH 里找 python3，不会自己发现项目里的虚拟环境。
+      -- 项目根下有 pyrightconfig.json 时以它为准（venvPath/venv、extraPaths 都在里面配），
+      -- 否则退化为在根目录找 .venv / venv 并把解释器告回去。
+      local function pyright_python_path(root)
+        if not root or vim.uv.fs_stat(root .. "/pyrightconfig.json") then
+          return nil
+        end
+        for _, dir in ipairs({ ".venv", "venv" }) do
+          local python = root .. "/" .. dir .. "/bin/python"
+          if vim.uv.fs_stat(python) then
+            return python
+          end
+        end
+      end
+
       vim.lsp.config("pyright", {
         settings = {
           python = {
@@ -213,6 +257,19 @@ require("lazy").setup({
             },
           },
         },
+        on_init = function(client)
+          local root = client.config.root_dir
+          local python = pyright_python_path(root)
+          if not python then
+            return
+          end
+          client.settings.python = vim.tbl_deep_extend(
+            "force",
+            client.settings.python or {},
+            { pythonPath = python }
+          )
+          client:notify("workspace/didChangeConfiguration", { settings = client.settings })
+        end,
       })
       vim.lsp.config("rust_analyzer", {
         settings = {
@@ -278,6 +335,7 @@ require("lazy").setup({
             override_file_sorter = true,
             case_mode = "smart_case",
           },
+          project = telescope_project,
         },
       })
       telescope.load_extension('fzf')
@@ -475,5 +533,26 @@ require("lazy").setup({
     dependencies = "kevinhwang91/promise-async",
     event = "VeryLazy",
     opts = {},
+  },
+  {
+    'nvim-telescope/telescope-project.nvim',
+    dependencies = {
+      'nvim-telescope/telescope.nvim',
+    },
+    keys = {
+      {
+        "<leader>fp",
+        function()
+          -- 只显示标题分不清重名项目（python-prompt-toolkit 之类），带上末两级路径。
+          require("telescope").extensions.project.project({ display_type = "two-segment" })
+        end,
+        desc = "Switch Project",
+      },
+    },
+    config = function()
+      -- 扩展参数已在 telescope.setup 的 extensions.project 里给出，这里只做注册，
+      -- 顺带让 :Telescope project 与命令补全可用。
+      require("telescope").load_extension("project")
+    end,
   },
 })
