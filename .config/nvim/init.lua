@@ -424,6 +424,33 @@ require("lazy").setup({
     },
   },
   {
+    -- diffview 自带一堆视图内键位（见 :h diffview-keymaps），但没有全局入口，
+    -- 只能 :DiffviewOpen 之类手敲，这里补上 <leader>g*。
+    "sindrets/diffview.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    cmd = {
+      "DiffviewOpen",
+      "DiffviewClose",
+      "DiffviewFileHistory",
+      "DiffviewToggleFiles",
+      "DiffviewFocusFiles",
+      "DiffviewRefresh",
+    },
+    keys = {
+      { "<leader>gv", "<cmd>DiffviewOpen<cr>", desc = "Diffview: Working Tree" },
+      { "<leader>gh", "<cmd>DiffviewFileHistory<cr>", desc = "Diffview: File History" },
+      { "<leader>gH", "<cmd>DiffviewFileHistory %<cr>", desc = "Diffview: Current File History" },
+      { "<leader>gq", "<cmd>DiffviewClose<cr>", desc = "Diffview: Close" },
+    },
+    opts = {
+      enhanced_diff_hl = true,
+      view = {
+        default = { winbar_info = true },
+        file_history = { winbar_info = true },
+      },
+    },
+  },
+  {
     'L3MON4D3/LuaSnip',
     dependencies = {
       "rafamadriz/friendly-snippets"
