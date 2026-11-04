@@ -400,6 +400,30 @@ require("lazy").setup({
     opts = {},
   },
   {
+    "NeogitOrg/neogit",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-telescope/telescope.nvim",
+      -- diffview 用来承载 Neogit 的 diff 视图（s 键），没有它也能用内置 diff。
+      "sindrets/diffview.nvim",
+    },
+    cmd = "Neogit",
+    keys = {
+      { "<leader>gn", "<cmd>Neogit<cr>", desc = "Neogit Status" },
+      { "<leader>gc", "<cmd>Neogit commit<cr>", desc = "Neogit Commit" },
+      { "<leader>gL", "<cmd>Neogit log<cr>", desc = "Neogit Log" },
+    },
+    opts = {
+      -- 让 Neogit 的 select/input 走 telescope，与现有的 picker 体验一致。
+      integrations = {
+        telescope = true,
+        diffview = true,
+      },
+      graph_style = "unicode",
+      commit_editor = { kind = "split" },
+    },
+  },
+  {
     'L3MON4D3/LuaSnip',
     dependencies = {
       "rafamadriz/friendly-snippets"
