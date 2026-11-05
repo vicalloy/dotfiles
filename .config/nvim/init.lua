@@ -606,4 +606,9 @@ require("lazy").setup({
       require("telescope").load_extension("project")
     end,
   },
+  {
+    "hong4rc/copy-path.nvim",
+    event = "VeryLazy",
+    opts = {},
+  },
 })
