@@ -314,14 +314,27 @@ require("lazy").setup({
     dependencies = {
       'nvim-lua/plenary.nvim',
       { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },
+      -- live_grep 的带参数版本：prompt 里可以直接写 rg 参数
+      -- （"foo bar"、-tmd、--no-ignore、--iglob **/test/** …），固定 minor 版本避免破坏性更新。
+      { 'nvim-telescope/telescope-live-grep-args.nvim', version = '^1.0.0' },
     },
     keys = {
       { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
       { "<leader>fb", "<cmd>Telescope buffers<cr>", desc = "Find Buffers" },
       { "<leader>fg", "<cmd>Telescope live_grep<cr>", desc = "Live Grep" },
+      {
+        "<leader>fG",
+        function()
+          require("telescope").extensions.live_grep_args.live_grep_args()
+        end,
+        desc = "Live Grep (rg args)",
+      },
     },
     config = function()
       local telescope = require("telescope")
+      -- 只在 live_grep_args 的 picker 内生效，不影响其他 picker 的 <C-k>。
+      -- 没绑 quote_prompt 时，prompt 不以 " ' - 开头会被整段当成一个参数。
+      local lga_actions = require("telescope-live-grep-args.actions")
       telescope.setup({
         pickers = {
           find_files = {
@@ -336,9 +349,19 @@ require("lazy").setup({
             case_mode = "smart_case",
           },
           project = telescope_project,
+          live_grep_args = {
+            auto_quoting = true,
+            mappings = {
+              i = {
+                -- 覆盖 telescope 默认的 <C-k>（preview 右滚），换 rg 参数用的自动加引号
+                ["<C-k>"] = lga_actions.quote_prompt(),
+              },
+            },
+          },
         },
       })
       telescope.load_extension('fzf')
+      telescope.load_extension('live_grep_args')
     end,
   },
   {
