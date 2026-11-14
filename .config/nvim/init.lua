@@ -33,10 +33,18 @@ vim.opt.foldlevel = 99
 vim.opt.autoread = true
 vim.opt.wrap = false
 
-local cargo_bin = vim.fs.joinpath(vim.env.HOME, ".cargo", "bin")
+-- GUI 启动（Neovide / Finder）拿不到 shell 的 PATH，这里保证 nvim 至少能找到
+-- ~/.cargo/bin 和 ~/.local/bin（uv tool 装的 pyrefly 在后者）。
+local extra_bins = {
+  vim.fs.joinpath(vim.env.HOME, ".cargo", "bin"),
+  vim.fs.joinpath(vim.env.HOME, ".local", "bin"),
+}
 local path_entries = vim.split(vim.env.PATH or "", ":", { plain = true, trimempty = true })
-if not vim.tbl_contains(path_entries, cargo_bin) then
-  vim.env.PATH = vim.env.PATH and (vim.env.PATH .. ":" .. cargo_bin) or cargo_bin
+for _, bin in ipairs(extra_bins) do
+  if not vim.tbl_contains(path_entries, bin) then
+    vim.env.PATH = vim.env.PATH and (vim.env.PATH .. ":" .. bin) or bin
+    table.insert(path_entries, bin)
+  end
 end
 
 local filetype_group = vim.api.nvim_create_augroup("UserFileType", { clear = true })
@@ -232,44 +240,29 @@ require("lazy").setup({
           },
         },
       })
-      -- pyright 只会在 PATH 里找 python3，不会自己发现项目里的虚拟环境。
-      -- 项目根下有 pyrightconfig.json 时以它为准（venvPath/venv、extraPaths 都在里面配），
-      -- 否则退化为在根目录找 .venv / venv 并把解释器告回去。
-      local function pyright_python_path(root)
-        if not root or vim.uv.fs_stat(root .. "/pyrightconfig.json") then
-          return nil
-        end
-        for _, dir in ipairs({ ".venv", "venv" }) do
-          local python = root .. "/" .. dir .. "/bin/python"
-          if vim.uv.fs_stat(python) then
-            return python
-          end
-        end
-      end
-
-      vim.lsp.config("pyright", {
-        settings = {
-          python = {
-            analysis = {
-              typeCheckingMode = "basic",
-              autoSearchPaths = true,
-              useLibraryCodeForTypes = true,
-            },
-          },
+      -- pyrefly（Rust 实现，替代 pyright）自己会向上找 .venv / venv / env 选解释器，
+      -- 不需要像 pyright 那样手动把 pythonPath 塞进 settings。检查强度、
+      -- include/exclude、search-path 写在项目根的 pyrefly.toml（或 pyproject.toml
+      -- 的 [tool.pyrefly]）里；两者都没有时走 auto 配置，会先把近旁的
+      -- pyrightconfig.json / mypy.ini 在内存里迁移过来，迁移不了才退到 basic 预设。
+      -- 不设 workspace_required：没有标记时按单文件模式启动（root_dir 为空），
+      -- pyrefly 本来就按文件自己找配置，实测无 root 时诊断、导入解析都正常；
+      -- 设成 true 反而在无标记目录里不启动，比原来的 pyright 少了诊断。
+      -- root_dir 为空的 buffer 共用一个客户端，不会每个文件起一个。
+      vim.lsp.config("pyrefly", {
+        -- 在上游默认（pyrefly.toml / pyproject.toml / setup.py / setup.cfg /
+        -- requirements.txt / Pipfile / .git）基础上补 pyrightconfig.json —— 还没
+        -- 迁到 pyrefly.toml 的项目靠它定位根；去掉 .git，否则 monorepo 根上只凭
+        -- .git 就会把整棵树当成一个 workspace 索引一遍。
+        root_markers = {
+          "pyrefly.toml",
+          "pyrightconfig.json",
+          "pyproject.toml",
+          "setup.py",
+          "setup.cfg",
+          "requirements.txt",
+          "Pipfile",
         },
-        on_init = function(client)
-          local root = client.config.root_dir
-          local python = pyright_python_path(root)
-          if not python then
-            return
-          end
-          client.settings.python = vim.tbl_deep_extend(
-            "force",
-            client.settings.python or {},
-            { pythonPath = python }
-          )
-          client:notify("workspace/didChangeConfiguration", { settings = client.settings })
-        end,
       })
       vim.lsp.config("rust_analyzer", {
         settings = {
@@ -283,9 +276,17 @@ require("lazy").setup({
 
       require("mason").setup()
       -- v2 默认通过 vim.lsp.enable() 启用所有已安装的服务器。
+      -- pyrefly 不在这里：它由 uv tool 管理（~/.local/bin/pyrefly），让 mason 再装
+      -- 一份会多出一个 python venv 和一条升级链路，容易分不清实际跑的是哪个二进制。
       require("mason-lspconfig").setup({
-        ensure_installed = { "lua_ls", "pyright", "rust_analyzer", "ts_ls" },
+        ensure_installed = { "lua_ls", "rust_analyzer", "ts_ls" },
+        -- pyright 还留在 mason 里也别让它跟着 .py 启动，否则两套类型引擎同时挂在
+        -- 同一个 buffer 上内存翻倍。在 automatic_enable 里排除，而不是等 setup
+        -- 启用之后再 vim.lsp.enable("pyright", false)，后者依赖启用时序。
+        automatic_enable = { exclude = { "pyright" } },
       })
+
+      vim.lsp.enable("pyrefly")
     end,
   },
   {
