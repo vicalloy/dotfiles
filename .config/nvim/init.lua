@@ -23,13 +23,15 @@ vim.opt.rtp:prepend(lazypath)
 -- =============================================================================
 -- General Options
 -- =============================================================================
-vim.opt.guifont = 'Source Code Pro'  -- Hack
+vim.opt.guifont = 'SauceCodePro Nerd Font:h14'
 vim.opt.cursorline = true
 vim.opt.background = 'dark'
 vim.opt.backup = false
 vim.opt.fileformats = 'unix'
 vim.opt.fileencodings = 'ucs-bom,utf-8,gbk,big5,latin1'
 vim.opt.foldlevel = 99
+vim.opt.foldmethod = 'expr'
+vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 vim.opt.autoread = true
 vim.opt.wrap = false
 
@@ -104,6 +106,7 @@ vim.api.nvim_create_autocmd("FileType", {
   group = filetype_group,
   pattern = "lua",
   callback = function()
+    -- lua 的兜底缩进；guess-indent 在 BufReadPost 之后按文件内容探测并覆盖
     vim.opt_local.ts = 2
     vim.opt_local.sw = 2
     vim.opt_local.et = true
@@ -131,6 +134,27 @@ vim.diagnostic.config({
   float = {
     border = "rounded",
   },
+})
+
+-- =============================================================================
+-- Inlay Hints / Undotree / LSP Progress（全部走 0.12 内置，不装插件）
+-- =============================================================================
+-- pyrefly / rust-analyzer 都支持 inlay hints
+vim.lsp.inlay_hint.enable(true)
+vim.keymap.set('n', '<leader>ih', function()
+  vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
+end, { desc = "Toggle Inlay Hints" })
+
+-- 0.12 自带 nvim.undotree（pack/dist/opt）
+vim.keymap.set('n', '<leader>u', function()
+  vim.cmd.packadd('nvim.undotree')
+  vim.cmd.Undotree()
+end, { desc = "Undotree" })
+
+-- LSP 进度事件触发 statusline 重绘，配合 lualine 的进度段，省掉 fidget
+vim.api.nvim_create_autocmd('LspProgress', {
+  group = vim.api.nvim_create_augroup('UserLspProgress', { clear = true }),
+  callback = function() vim.cmd.redrawstatus() end,
 })
 
 -- =============================================================================
@@ -167,8 +191,18 @@ local telescope_project = {
 -- =============================================================================
 require("lazy").setup({
   {
-    'echasnovski/mini.icons',
+    'nvim-mini/mini.icons',
     version = '*',
+    config = function()
+      require('mini.icons').setup({})
+      -- 让只认 nvim-web-devicons 的插件（neo-tree / lualine）继续拿到图标
+      require('mini.icons').mock_nvim_web_devicons()
+    end,
+  },
+  {
+    -- 按文件内容探测缩进，覆盖默认值；lua 的 2 空格仍由 FileType autocmd 兜底
+    'NMAC427/guess-indent.nvim',
+    event = { 'BufReadPre', 'BufNewFile' },
     opts = {},
   },
   {
@@ -211,12 +245,8 @@ require("lazy").setup({
         vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
         vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
         vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
-        vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, opts)
-        vim.keymap.set('n', '<leader>D', vim.lsp.buf.type_definition, opts)
         vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
         vim.keymap.set({ 'n', 'v' }, '<leader>ca', vim.lsp.buf.code_action, opts)
-        vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
-        vim.keymap.set('n', '<leader>f', function() vim.lsp.buf.format { async = true } end, opts)
         vim.keymap.set('n', '[d', function()
           vim.diagnostic.jump({ count = -1, float = true })
         end, opts)
@@ -224,22 +254,13 @@ require("lazy").setup({
           vim.diagnostic.jump({ count = 1, float = true })
         end, opts)
         vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, opts)
-        vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, opts)
       end
 
       vim.lsp.config("*", {
         on_attach = on_attach,
         capabilities = capabilities,
       })
-      vim.lsp.config("lua_ls", {
-        settings = {
-          Lua = {
-            diagnostics = {
-              globals = { 'vim' },
-            },
-          },
-        },
-      })
+      -- lua_ls 的 vim 全局由 lazydev 提供，不再单独配 diagnostics.globals
       -- pyrefly（Rust 实现，替代 pyright）自己会向上找 .venv / venv / env 选解释器，
       -- 不需要像 pyright 那样手动把 pythonPath 塞进 settings。检查强度、
       -- include/exclude、search-path 写在项目根的 pyrefly.toml（或 pyproject.toml
@@ -290,10 +311,66 @@ require("lazy").setup({
     end,
   },
   {
+    -- 编辑 nvim 配置本身时补 vim.* / luv 的类型与补全
+    "folke/lazydev.nvim",
+    ft = "lua",
+    opts = {
+      library = {
+        { path = "${3rd}/luv/library", words = { "vim%.uv" } },
+      },
+    },
+  },
+  {
+    -- 统一格式化入口；pyrefly 不做格式化，ruff/stylua/prettier 从这里走
+    "stevearc/conform.nvim",
+    cmd = { "ConformInfo" },
+    keys = {
+      {
+        "<leader>f",
+        function() require("conform").format({ async = true, lsp_format = "fallback" }) end,
+        mode = { "n", "v" },
+        desc = "Format",
+      },
+    },
+    opts = {
+      formatters_by_ft = {
+        python = { "ruff_organize_imports", "ruff_format" },
+        lua = { "stylua" },
+        javascript = { "prettier" },
+        typescript = { "prettier" },
+        -- rust 不配：lsp_format = "fallback" 走 rustfmt
+      },
+    },
+  },
+  {
+    -- LSP 之外的静态检查；python 只用这里的 ruff，不再额外启用 ruff LSP
+    "mfussenegger/nvim-lint",
+    event = { "BufReadPre", "BufNewFile" },
+    config = function()
+      local lint = require("lint")
+      -- GUI 启动时 PATH 可能不含 conda 等目录；只注册当前找得到的 linter，
+      -- 否则缺可执行文件会弹 "Error running ruff: ENOENT"。
+      local wanted = {
+        python = { "ruff" },
+        sh = { "shellcheck" },
+        dockerfile = { "hadolint" },
+        yaml = { "yamllint" },
+      }
+      for ft, names in pairs(wanted) do
+        lint.linters_by_ft[ft] = vim.tbl_filter(function(name)
+          return vim.fn.executable(name) == 1
+        end, names)
+      end
+      vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
+        group = vim.api.nvim_create_augroup("UserLint", { clear = true }),
+        callback = function() lint.try_lint() end,
+      })
+    end,
+  },
+  {
     "nvim-neo-tree/neo-tree.nvim",
     dependencies = {
       'nvim-lua/plenary.nvim',
-      'nvim-tree/nvim-web-devicons',
       'MunifTanjim/nui.nvim',
     },
     keys = {
@@ -407,10 +484,14 @@ require("lazy").setup({
   },
   {
     "nvim-lualine/lualine.nvim",
-    dependencies = {
-      'nvim-tree/nvim-web-devicons',
+    opts = {
+      sections = {
+        lualine_x = {
+          function() return vim.ui.progress_status() end,
+          'encoding', 'fileformat', 'filetype',
+        },
+      },
     },
-    opts = {},
   },
   {
     "akinsho/toggleterm.nvim",
@@ -493,6 +574,9 @@ require("lazy").setup({
       "hrsh7th/cmp-buffer",
       "hrsh7th/cmp-path",
       'hrsh7th/cmp-cmdline',
+      -- 括号/引号自动配对；关掉 autopairs 自己的 <CR>，避免覆盖 cmp 的确认键
+      { 'windwp/nvim-autopairs', opts = { map_cr = false } },
+      'hrsh7th/cmp-nvim-lsp-signature-help',
     },
     config = function()
       local cmp = require("cmp")
@@ -535,6 +619,7 @@ require("lazy").setup({
         }),
         sources = cmp.config.sources({
           { name = 'nvim_lsp', priority = 1000 },
+          { name = 'nvim_lsp_signature_help', priority = 900 },
           { name = 'luasnip', priority = 750 },
         }, {
           { name = 'buffer', priority = 500 },
@@ -550,6 +635,10 @@ require("lazy").setup({
           ghost_text = true,
         }
       })
+
+      -- autopairs 与 cmp 联动：确认补全后补上右半边括号
+      local cmp_autopairs = require("nvim-autopairs.completion.cmp")
+      cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
 
       vim.api.nvim_create_autocmd("InsertCharPre", {
         group = vim.api.nvim_create_augroup("UserCmp", { clear = true }),
@@ -576,13 +665,46 @@ require("lazy").setup({
   },
   {
     'mfussenegger/nvim-dap',
+    dependencies = {
+      { 'rcarriga/nvim-dap-ui', dependencies = { 'nvim-neotest/nvim-nio' }, opts = {} },
+      { 'theHamsta/nvim-dap-virtual-text', opts = {} },
+      -- codelldb（Rust/C/C++）自动安装并注册 adapter/configurations。
+      -- Python 走 uv + dap-python，这里不声明 python。
+      {
+        'jay-babu/mason-nvim-dap.nvim',
+        dependencies = { 'mason-org/mason.nvim' },
+        opts = { ensure_installed = { 'codelldb' }, handlers = {} },
+      },
+    },
+    keys = {
+      { '<F5>', function() require('dap').continue() end, desc = "DAP: Continue" },
+      { '<F10>', function() require('dap').step_over() end, desc = "DAP: Step Over" },
+      { '<F11>', function() require('dap').step_into() end, desc = "DAP: Step Into" },
+      { '<F12>', function() require('dap').step_out() end, desc = "DAP: Step Out" },
+      { '<leader>db', function() require('dap').toggle_breakpoint() end, desc = "DAP: Breakpoint" },
+      { '<leader>du', function() require('dapui').toggle() end, desc = "DAP: UI" },
+      { '<leader>dr', function() require('dap').repl.open() end, desc = "DAP: REPL" },
+      { '<leader>dl', function() require('dap').run_last() end, desc = "DAP: Run Last" },
+      { '<leader>dx', function() require('dap').terminate() end, desc = "DAP: Terminate" },
+    },
     config = function()
-      local dap = require("dap")
-      vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "DAP: Toggle breakpoint" })
-      vim.keymap.set('n', '<F5>', dap.continue, { desc = "DAP: Continue" })
-      vim.keymap.set('n', '<F10>', dap.step_over, { desc = "DAP: Step Over" })
-      vim.keymap.set('n', '<F11>', dap.step_into, { desc = "DAP: Step Into" })
-      vim.keymap.set('n', '<F12>', dap.step_out, { desc = "DAP: Step Out" })
+      local dap, dapui = require("dap"), require("dapui")
+      dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end
+      dap.listeners.before.event_terminated["dapui_config"] = function() dapui.close() end
+      dap.listeners.before.event_exited["dapui_config"] = function() dapui.close() end
+    end,
+  },
+  {
+    'mfussenegger/nvim-dap-python',
+    ft = 'python',
+    dependencies = { 'mfussenegger/nvim-dap' },
+    keys = {
+      { '<leader>dn', function() require('dap-python').test_method() end, desc = "Debug Test Method", ft = "python" },
+      { '<leader>df', function() require('dap-python').test_class() end, desc = "Debug Test Class", ft = "python" },
+    },
+    config = function()
+      -- debugpy 由 uv 临时环境提供，不依赖项目 venv
+      require('dap-python').setup('uv')
     end,
   },
   {
@@ -604,10 +726,36 @@ require("lazy").setup({
     opts = {},
   },
   {
-    "kevinhwang91/nvim-ufo",
-    dependencies = "kevinhwang91/promise-async",
+    "folke/flash.nvim",
     event = "VeryLazy",
     opts = {},
+    keys = {
+      { "s", mode = { "n", "x", "o" }, function() require("flash").jump() end, desc = "Flash" },
+      -- visual 的 S 被 nvim-surround 占用，这里只绑 n/o
+      { "S", mode = { "n", "o" }, function() require("flash").treesitter() end, desc = "Flash Treesitter" },
+      { "r", mode = "o", function() require("flash").remote() end, desc = "Flash Remote" },
+    },
+  },
+  {
+    "folke/trouble.nvim",
+    cmd = "Trouble",
+    opts = {},
+    keys = {
+      { "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>", desc = "Diagnostics (workspace)" },
+      { "<leader>xX", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", desc = "Diagnostics (buffer)" },
+      { "<leader>xq", "<cmd>Trouble qflist toggle<cr>", desc = "Quickfix" },
+      { "<leader>xl", "<cmd>Trouble loclist toggle<cr>", desc = "Loclist" },
+    },
+  },
+  {
+    "folke/todo-comments.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    event = { "BufReadPre", "BufNewFile" },
+    opts = {},
+    keys = {
+      { "<leader>xt", "<cmd>TodoTrouble<cr>", desc = "Todo (Trouble)" },
+      { "<leader>st", "<cmd>TodoTelescope<cr>", desc = "Todo (Telescope)" },
+    },
   },
   {
     'nvim-telescope/telescope-project.nvim',
@@ -637,7 +785,7 @@ require("lazy").setup({
   },
   {
     'MeanderingProgrammer/render-markdown.nvim',
-    dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.nvim' },            -- if you use the mini.nvim suite
+    dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.icons' },
     ---@module 'render-markdown'
     ---@type render.md.UserConfig
     opts = {},
